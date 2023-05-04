@@ -1,8 +1,8 @@
 module namespace em="ddtekjava:com.ivitechnologies.pipeline.ext.email.Email"; 
 
 declare function em:Email($sender as xs:string, $recipients as xs:string, $subject as xs:string, $body as xs:string, $message_mime_type as xs:string, $atatchments as xs:string*) as ddtek:javaObject external;
-declare function em:setHeader($name as xs:string, $value as xs:string) as xs:string external;
 
+declare function em:setHeader($name as xs:string, $value as xs:string) as xs:string external;
 declare function em:getSubject($this as ddtek:javaObject) as xs:string external; 
 declare function em:getUID($this as ddtek:javaObject) as xs:long external; 
 declare function em:getContentType($this as ddtek:javaObject) as xs:string external; 
@@ -17,6 +17,3 @@ declare function em:getPartObject($this as ddtek:javaObject, $index as xs:int) a
 declare function em:getPartObjectByFileName($this as ddtek:javaObject, $FileName as xs:string) as ddtek:javaObject external;
 declare function em:getParts($this as ddtek:javaObject) as document-node()? external; 
 declare function em:saveAttachmentToFile($this as ddtek:javaObject, $attachmentName as xs:string, $fileOrUri as xs:string) as xs:boolean external;
-
-
-declare function em:setHeader($name as xs:string, $value as xs:string) as xs:string external;
