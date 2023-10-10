@@ -1,6 +1,7 @@
 module namespace xps_file = "ddtekjava:com.ivitechnologies.pipeline.ext.io.FileOperations"; 
 
 declare function xps_file:copy($uriSourceFile as xs:string, $uriTargetFile as xs:string) as xs:boolean external;
+declare function xps_file:copyTree($uriSourceFile as xs:string, $uriTargetFile as xs:string) as xs:boolean external;
 declare function xps_file:move($uriSourceFile as xs:string, $uriTargetFile as xs:string) as xs:boolean external;
 declare function xps_file:delete($uriLocalFile as xs:string, $deleteIfExists as xs:boolean) as xs:boolean external;
 declare function xps_file:deleteTree($uriLocalFile as xs:string, $doNotThrowIfAlreadyExists as xs:boolean) as xs:boolean external;
