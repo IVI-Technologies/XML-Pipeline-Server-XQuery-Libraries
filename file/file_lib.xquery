@@ -16,3 +16,4 @@ declare function xps_file:writeAll($uriOrLocalPath as xs:string, $data as xs:str
 declare function xps_file:writeAll($uriOrLocalPath as xs:string, $data as xs:string, $encoding as xs:string) as xs:boolean external;
 declare function xps_file:deleteOldFilesFromFolder( $folder as xs:string, $file_filter_regex as xs:string, $olderThan as xs:string) as xs:boolean external;
 declare function xps_file:listFiles($folderOrUrl as xs:string, $filter as xs:string, $recursive as xs:boolean) as element() external;
+declare function xps_file:syncFiles($uriOrPathSourceFolder as xs:string, $uriOrPathTargetFolder as xs:string,$filter as xs:string) as xs:string* external;
