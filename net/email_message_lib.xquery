@@ -17,3 +17,5 @@ declare function em:getPartObject($this as ddtek:javaObject, $index as xs:int) a
 declare function em:getPartObjectByFileName($this as ddtek:javaObject, $FileName as xs:string) as ddtek:javaObject external;
 declare function em:getParts($this as ddtek:javaObject) as document-node()? external; 
 declare function em:saveAttachmentToFile($this as ddtek:javaObject, $attachmentName as xs:string, $fileOrUri as xs:string) as xs:boolean external;
+declare function em:addBase64Attachment($this as ddtek:javaObject, $filename as xs:string, $base64 as xs:string) as xs:boolean external;
+declare function em:hasAttachments($this as ddtek:javaObject) as xs:boolean external;
