@@ -65,7 +65,7 @@ For the complete XML Pipeline Server documentation, see the [User's Guide](https
 
 ## Requirements
 
-- XML Pipeline Server 2.x (build 248 or later)
+- XML Pipeline Server 1.x (build 248 or later)
 - Java 1.8 or later (Java 11+ recommended, Java 25 supported)
 
 ## License
