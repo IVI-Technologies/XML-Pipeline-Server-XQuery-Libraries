@@ -54,8 +54,11 @@
  :     (e.g. "Sheet1.xml" vs "sheet1.xml") and non-standard paths both work.
  :   - Rich-text shared strings (<si><r>...<t/></r><r>...<t/></r></si>) are
  :     concatenated into a single string.
- :   - Merged cells are NOT expanded: the value appears only in the top-left
- :     cell of the merge range; the rest are empty.
+ :   - Merged cells are honored via the worksheet's <mergeCells> declarations:
+ :     only the top-left cell of each merge range is emitted; the other
+ :     cells in the range are skipped even if the .xlsx happens to store
+ :     duplicate values in them. This collapses logical columns to one
+ :     element per merge.
  :)
 
 module namespace xlsx = "urn:ivi:xlsx";
@@ -122,6 +125,38 @@ declare function xlsx:columnLetterToIndex($letters as xs:string) as xs:integer
 declare function xlsx:refToColIndex($ref as xs:string) as xs:integer
 {
   xlsx:columnLetterToIndex(replace($ref, '[0-9]+$', ''))
+};
+
+(: Extract the row number from a cell reference like "C5" -> 5. :)
+declare function xlsx:refToRowIndex($ref as xs:string) as xs:integer
+{
+  xs:integer(replace($ref, '^[A-Za-z]+', ''))
+};
+
+(: True if a cell is hidden by a merge range: it falls inside the range but
+   is not the top-left. Helper for isMergeKeeper. :)
+declare function xlsx:isHiddenByMerge($cellRef as xs:string, $col as xs:integer, $row as xs:integer, $merge as element()) as xs:boolean
+{
+  let $parts       := tokenize(string($merge/@ref), ':')
+  let $topLeft     := $parts[1]
+  let $bottomRight := if(count($parts) = 2) then $parts[2] else $topLeft
+  let $col1        := xlsx:refToColIndex($topLeft)
+  let $row1        := xlsx:refToRowIndex($topLeft)
+  let $col2        := xlsx:refToColIndex($bottomRight)
+  let $row2        := xlsx:refToRowIndex($bottomRight)
+  let $inRange     := $col >= $col1 and $col <= $col2 and $row >= $row1 and $row <= $row2
+  return $inRange and not($cellRef = $topLeft)
+};
+
+(: True unless the cell is inside a merge range and NOT the top-left of it.
+   Top-left of any merge -> true. Outside every merge -> true. Inside a merge
+   but not the top-left -> false. Some .xlsx files store duplicate values in
+   the non-top-left cells of a merge; honoring this flag collapses them. :)
+declare function xlsx:isMergeKeeper($cellRef as xs:string, $merges as element()*) as xs:boolean
+{
+  let $col := xlsx:refToColIndex($cellRef)
+  let $row := xlsx:refToRowIndex($cellRef)
+  return not(some $merge in $merges satisfies xlsx:isHiddenByMerge($cellRef, $col, $row, $merge))
 };
 
 
@@ -338,11 +373,12 @@ declare function xlsx:getCellTypedValue($cell, $sharedStrings, $styles, $is1904 
    ============================================================ :)
 
 (: From the designated header row, produce one <header col="N" name="..."/>
-   per cell. Column positions come from @r so sparse header rows are honored. :)
-declare function xlsx:buildHeaders($sheetData, $sharedStrings, $styles, $is1904 as xs:boolean, $headerRowIdx as xs:integer)
+   per cell. Column positions come from @r so sparse header rows are honored.
+   Cells inside a merge range but not at its top-left are skipped. :)
+declare function xlsx:buildHeaders($sheetData, $sharedStrings, $styles, $is1904 as xs:boolean, $headerRowIdx as xs:integer, $merges as element()*)
 {
   let $headerRow := $sheetData/spml:row[xs:integer(@r) = $headerRowIdx]
-  for $cell in $headerRow/spml:c
+  for $cell in $headerRow/spml:c[xlsx:isMergeKeeper(string(@r), $merges)]
   let $colIdx  := xlsx:refToColIndex(string($cell/@r))
   let $valElt  := xlsx:getCellTypedValue($cell, $sharedStrings, $styles, $is1904)
   let $name    := xlsx:makeQname(string($valElt))
@@ -351,14 +387,16 @@ declare function xlsx:buildHeaders($sheetData, $sharedStrings, $styles, $is1904 
 
 (: Build one <row> element from a data row. Iterates the header list so that
    the output always has one child per defined column; missing cells become
-   xsi:nil placeholders (preserving column position). :)
-declare function xlsx:buildRow($row, $sharedStrings, $styles, $is1904 as xs:boolean, $headers)
+   xsi:nil placeholders (preserving column position). Cells inside a merge
+   range but not at its top-left are treated as missing. :)
+declare function xlsx:buildRow($row, $sharedStrings, $styles, $is1904 as xs:boolean, $headers, $merges as element()*)
 {
   <row>{
     for $h in $headers
     let $colIdx := xs:integer($h/@col)
     let $name   := string($h/@name)
-    let $match  := $row/spml:c[xlsx:refToColIndex(string(@r)) = $colIdx]
+    let $match  := $row/spml:c[xlsx:refToColIndex(string(@r)) = $colIdx
+                               and xlsx:isMergeKeeper(string(@r), $merges)]
     return
       if(exists($match)) then
         let $valElt := xlsx:getCellTypedValue($match, $sharedStrings, $styles, $is1904)
@@ -401,14 +439,15 @@ declare function xlsx:getCellsFromPath($excelURL as xs:string, $sheetPath as xs:
   let $styles           := if(fn:doc-available($stylesURL))        then doc($stylesURL)        else ()
   let $workbook         := if(fn:doc-available($workbookURL))      then doc($workbookURL)      else ()
   let $is1904           := xlsx:is1904Mode($workbook)
+  let $merges           := $sheet/spml:worksheet/spml:mergeCells/spml:mergeCell
 
   let $sheetData        := $sheet/spml:worksheet/spml:sheetData
-  let $headers          := xlsx:buildHeaders($sheetData, $sharedStrings, $styles, $is1904, $headerRow)
+  let $headers          := xlsx:buildHeaders($sheetData, $sharedStrings, $styles, $is1904, $headerRow, $merges)
 
   return
     <table xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">{
       for $row in $sheetData/spml:row[xs:integer(@r) > $headerRow]
-      return xlsx:buildRow($row, $sharedStrings, $styles, $is1904, $headers)
+      return xlsx:buildRow($row, $sharedStrings, $styles, $is1904, $headers, $merges)
     }</table>
 };
 
