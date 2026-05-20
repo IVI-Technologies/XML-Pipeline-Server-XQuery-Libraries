@@ -10,6 +10,8 @@ A comprehensive set of XQuery extension function libraries for [XML Pipeline Ser
 | [time_lib](date_time/time_lib.xquery) | `DateTime` | Format current date/time in local or UTC time zones |
 | [timezone_lib](date_time/timezone_lib.xquery) | `TimeZoneToOffset` | Convert UTC dates to timezone-aware offsets (DST-aware) |
 | [ical_lib](date_time/ical_lib.xquery) | `ICALParser` | Convert between iCalendar (RFC 5545) and xCalendar (XML) |
+| **Excel** | | |
+| [xlsx_lib](excel/xlsx_lib.xquery) | `xlsx` (pure XQuery) | Extract typed cell content from Microsoft Excel `.xlsx` files — reads worksheets via `jar:` URL, maps cells to `xs:date` / `xs:time` / `xs:dateTime` / `xs:decimal` / `xs:integer` / `xs:boolean` / `xs:string` using styles.xml |
 | **File System** | | |
 | [file_lib](file/file_lib.xquery) | `FileOperations` | Copy, move, delete, read, write, list, and sync files and directories |
 | **Networking** | | |
@@ -55,7 +57,17 @@ let $files := xps_sftp:listFiles($config)
 return $files
 ```
 
-All functions are implemented as Java external functions. The `ddtekjava:` namespace prefix maps XQuery function calls to their Java implementations within XML Pipeline Server.
+Most libraries are thin wrappers around Java external functions; the `ddtekjava:` namespace prefix maps XQuery function calls to their Java implementations within XML Pipeline Server.
+
+A few libraries are written in pure XQuery and use their own namespace URI (no `ddtekjava:` prefix) — for example the Excel reader:
+
+```xquery
+import module namespace xlsx = "urn:ivi:xlsx"
+  at "[xps_root]/xquery_lib/xps/excel/xlsx_lib.xquery";
+
+let $url := "file:/path/to/workbook.xlsx"
+return xlsx:getCells($url, 1, 1)
+```
 
 ## Documentation
 
